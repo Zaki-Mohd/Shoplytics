@@ -1,47 +1,53 @@
 # =================== 1. Import libraries ===================
+from flask import Flask, request, jsonify, send_from_directory
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
+import os
 
-# =================== 2. Load dataset ===================
+# =================== 2. Load dataset and Train Model ===================
 df = pd.read_csv("Mall_Customers.csv")
-
-# Drop CustomerID
 df = df.drop('CustomerID', axis=1)
-
-# Use only Annual Income and Spending Score for clustering
 X = df.iloc[:, [2, 3]].values
-
-# =================== 3. Feature Scaling ===================
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
-
-# =================== 4. Train KMeans ===================
-# Using 5 clusters based on previous analysis
 kmeans = KMeans(n_clusters=5, init='k-means++', random_state=42)
 kmeans.fit(X_scaled)
 
-# =================== 5. Dynamic Input ===================
-while True:
-    try:
-        income = float(input("Enter customer's Annual Income (k$): "))
-        score = float(input("Enter customer's Spending Score (1-100): "))
-    except ValueError:
-        print("Please enter valid numeric values.")
-        continue
+# =================== 3. Create Flask App ===================
+app = Flask(__name__)
 
-    # Scale input using the same scaler
+# =================== 4. Define Routes ===================
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
+
+@app.route('/<path:path>')
+def static_files(path):
+    return send_from_directory('.', path)
+
+@app.route('/data')
+def get_data():
+    # Inverse transform the scaled data to get original values for plotting
+    X_original = scaler.inverse_transform(X_scaled)
+    cluster_centers_original = scaler.inverse_transform(kmeans.cluster_centers_)
+    
+    return jsonify({
+        'customers': X_original.tolist(),
+        'labels': kmeans.labels_.tolist(),
+        'cluster_centers': cluster_centers_original.tolist()
+    })
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    data = request.get_json()
+    income = float(data['income'])
+    score = float(data['score'])
+
     input_scaled = scaler.transform([[income, score]])
-
-    # Predict cluster
     cluster = kmeans.predict(input_scaled)[0]
 
-    cluster_mean = kmeans.cluster_centers_[cluster]
-    print(f"\nPredicted Cluster: {cluster + 1}")
-    print(f"Cluster Center (scaled features): Income={cluster_mean[0]:.2f}, Score={cluster_mean[1]:.2f}")
-
-    # Cluster insights
     insights = {
         0: "Low Income, High Spending Score - Optional targeting",
         1: "Average Income, Average Spending Score - Offer low-cost options",
@@ -49,8 +55,12 @@ while True:
         3: "Low Income, Low Spending Score - Not a priority",
         4: "High Income, High Spending Score - Loyal customers, target with new products"
     }
-    print(f"Cluster Insight: {insights[cluster]}")
 
-    more = input("\nAdd another customer? (y/n): ").lower()
-    if more != 'y':
-        break
+    return jsonify({
+        'cluster': int(cluster + 1),
+        'insight': insights[cluster]
+    })
+
+# =================== 5. Run App ===================
+if __name__ == '__main__':
+    app.run(debug=True)
