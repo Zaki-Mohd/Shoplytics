@@ -9,6 +9,11 @@ This project is a web application for customer segmentation using K-Means cluste
 - **Data Visualization:** A scatter plot visualizes the customer data, cluster centroids, and the predicted location of a new customer.
 - **Glassmorphism UI:** A modern and visually appealing user interface.
 
+## UI
+
+![Web UI](https://res.cloudinary.com/dihvty4sl/image/upload/v1761317297/Screenshot_2025-10-24_201528_j8zgdr.png)
+![Web UI](https://res.cloudinary.com/dihvty4sl/image/upload/v1761317296/Screenshot_2025-10-24_201540_hrvfc4.png)
+
 ## Technologies Used
 
 - **Frontend:**
